@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TreatOrHell - Student Questionnaire</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        
+        .question-block {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .question-number {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .question-text {
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+        
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .option {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .option:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.2);
+        }
+        
+        .option input[type="radio"] {
+            margin-right: 12px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .option label {
+            cursor: pointer;
+            flex: 1;
+            color: #555;
+        }
+        
+        .option.selected {
+            background: #f0f4ff;
+            border-color: #667eea;
+        }
+        
+        .submit-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 1.2em;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 30px;
+        }
+        
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #667eea;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 TreatOrHell Questionnaire 🎭</h1>
+        <p class="subtitle">Answer honestly... St. Nicholas is watching! 👀</p>
+        
+        <form id="questionnaireForm">
+            <!-- Questions will be dynamically inserted here -->
+        </form>
+        
+        <button type="button" id="submitBtn" class="submit-btn" onclick="submitAnswers()">
+            Submit Your Confession 😇😈
+        </button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Submitting your answers...</p>
+        </div>
+        
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let questionsData = {};
+
+        // Load questions when page loads
+        window.onload = async function() {
+            try {
+                const response = await fetch(`${API_BASE}/questions`);
+                const data = await response.json();
+                questionsData = data.questions;
+                displayQuestions(data.questions);
+            } catch (error) {
+                console.error('Failed to load questions:', error);
+                showResult('error', 'Failed to load questions. Please refresh the page.');
+            }
+        };
+
+        function displayQuestions(questions) {
+            const form = document.getElementById('questionnaireForm');
+            form.innerHTML = '';
+            
+            for (const [qId, qData] of Object.entries(questions)) {
+                const questionBlock = document.createElement('div');
+                questionBlock.className = 'question-block';
+                
+                questionBlock.innerHTML = `
+                    <div class="question-number">${qId}</div>
+                    <div class="question-text">${qData.question}</div>
+                    <div class="options" id="options-${qId}">
+                        ${qData.options.map((option, index) => `
+                            <div class="option" onclick="selectOption('${qId}', ${index})">
+                                <input type="radio" 
+                                       name="${qId}" 
+                                       id="${qId}-${index}" 
+                                       value="${option}"
+                                       onclick="event.stopPropagation()">
+                                <label for="${qId}-${index}">${option}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                form.appendChild(questionBlock);
+            }
+        }
+
+        function selectOption(questionId, optionIndex) {
+            // Clear previous selection styling
+            const allOptions = document.querySelectorAll(`#options-${questionId} .option`);
+            allOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Select the radio button
+            const radio = document.getElementById(`${questionId}-${optionIndex}`);
+            radio.checked = true;
+            
+            // Add selected styling
+            allOptions[optionIndex].classList.add('selected');
+        }
+
+        async function submitAnswers() {
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            
+            // Collect answers
+            const answers = {};
+            for (const qId of Object.keys(questionsData)) {
+                const selected = document.querySelector(`input[name="${qId}"]:checked`);
+                if (!selected) {
+                    showResult('error', `Please answer ${qId} before submitting!`);
+                    return;
+                }
+                answers[qId] = selected.value;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE}/submit-questions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ answers: answers })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('success', 
+                        `✨ ${data.message} ✨<br>
+                        Your responses have been recorded at ${data.timestamp}<br>
+                        May St. Nicholas have mercy on your soul! 🎅`
+                    );
+                    
+                    // Optional: Reset form after successful submission
+                    setTimeout(() => {
+                        if (confirm('Would you like to submit another response?')) {
+                            location.reload();
+                        }
+                    }, 3000);
+                } else {
+                    showResult('error', data.error || 'Failed to submit answers');
+                }
+            } catch (error) {
+                console.error('Submit error:', error);
+                showResult('error', 'Failed to submit answers. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        function showResult(type, message) {
+            const result = document.getElementById('result');
+            result.className = `result ${type}`;
+            result.innerHTML = message;
+            result.style.display = 'block';
+            
+            // Scroll to result
+            result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Add click handler to radio buttons to update styling
+        document.addEventListener('click', function(e) {
+            if (e.target.type === 'radio') {
+                const questionId = e.target.name;
+                const allOptions = document.querySelectorAll(`#options-${questionId} .option`);
+                allOptions.forEach(opt => opt.classList.remove('selected'));
+                e.target.parentElement.classList.add('selected');
+            }
+        });
+    </script>
+</body>
+</html>
