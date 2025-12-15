@@ -13,6 +13,15 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Choose where to store student_responses based on environment:
+# - On Vercel (serverless, read-only FS) use /tmp
+# - Locally, keep the file next to this module
+IS_VERCEL = os.getenv("VERCEL", "") != ""
+if IS_VERCEL:
+    STUDENT_RESPONSES_PATH = Path("/tmp/student_responses.txt")
+else:
+    STUDENT_RESPONSES_PATH = Path(__file__).parent / "student_responses.txt"
+
 app = FastAPI(title="TreatOrHell")
 
 # Add CORS middleware to allow frontend to communicate with API
@@ -74,7 +83,7 @@ QUESTIONS = {
 }
 def get_latest_student_responses():
     """Read the most recent student responses from student_responses.txt"""
-    file_path = Path(__file__).parent / "student_responses.txt"
+    file_path = STUDENT_RESPONSES_PATH
     try:
         if not file_path.exists():
             return None
@@ -194,7 +203,7 @@ def submit_answers(response: QuestionnaireResponse):
     
     # Save answers to student_responses.txt (overwrite per submission)
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    file_path = Path(__file__).parent / "student_responses.txt"
+    file_path = STUDENT_RESPONSES_PATH
     
     try:
         with open(file_path, "w", encoding="utf-8") as f:

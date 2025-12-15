@@ -201,7 +201,8 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:8000';
+        // Use same-origin so it works locally via the FastAPI route and on Vercel
+        const API_BASE = '';
         let questionsData = {};
 
         // Load questions when page loads
